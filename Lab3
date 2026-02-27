@@ -1,0 +1,73 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Adafruit_MPU6050 mpu;
+
+float lastX = 0;
+float lastY = 0;
+float lastZ = 0;
+
+const float threshold = 0.05;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+  if (!mpu.begin()) {
+    lcd.setCursor(0,0);
+    lcd.print("MPU NOT FOUND");
+    while (1);
+  }
+
+  lcd.setCursor(0,0);
+  lcd.print("MPU Ready");
+  delay(1500);
+  lcd.clear();
+}
+
+void loop() {
+
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  float x = a.acceleration.x;
+  float y = a.acceleration.y;
+  float z = a.acceleration.z;
+
+  if (abs(x - lastX) > threshold ||
+      abs(y - lastY) > threshold ||
+      abs(z - lastZ) > threshold) {
+
+    // ===== SERIAL =====
+    Serial.print("X: "); Serial.print(x, 2);
+    Serial.print("  Y: "); Serial.print(y, 2);
+    Serial.print("  Z: "); Serial.println(z, 2);
+
+    // ===== LCD ROW 1 =====
+    lcd.setCursor(0,0);
+    lcd.print("X:");
+    lcd.print(x,2);
+    lcd.print(" Y:");
+    lcd.print(y,2);
+    lcd.print("   ");   // clear extra chars
+
+    // ===== LCD ROW 2 =====
+    lcd.setCursor(0,1);
+    lcd.print("Z:");
+    lcd.print(z,2);
+    lcd.print("        ");
+
+    lastX = x;
+    lastY = y;
+    lastZ = z;
+  }
+
+  delay(100);
+}
