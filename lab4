@@ -1,0 +1,74 @@
+#include <SPI.h>
+#include <MFRC522.h>
+// with buzzer
+#define SS1 10
+#define RST1 9
+#define SS2 8
+#define RST2 7
+#define BUZZER 6
+
+MFRC522 rfid1(SS1, RST1);
+MFRC522 rfid2(SS2, RST2);
+
+// 🔊 Beep function
+void beep(int duration) {
+  tone(BUZZER, 1000);
+  delay(duration);
+  noTone(BUZZER);
+}
+
+// 🔁 Function to read RFID safely
+void readRFID(MFRC522 &rfid, int ssPin, String readerName) {
+
+  digitalWrite(SS1, HIGH);
+  digitalWrite(SS2, HIGH);
+
+  digitalWrite(ssPin, LOW);   // Select this reader
+
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+
+    beep(200);
+
+    Serial.print(readerName);
+    Serial.print(" - UID: ");
+
+    for (byte i = 0; i < rfid.uid.size; i++) {
+      if (rfid.uid.uidByte[i] < 0x10) Serial.print("0");
+      Serial.print(rfid.uid.uidByte[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();   // 🔥 VERY IMPORTANT
+  }
+
+  digitalWrite(ssPin, HIGH);  // Deselect after reading
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(SS1, OUTPUT);
+  pinMode(SS2, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
+
+  digitalWrite(SS1, HIGH);
+  digitalWrite(SS2, HIGH);
+  digitalWrite(BUZZER, LOW);
+
+  SPI.begin();
+
+  rfid1.PCD_Init();
+  rfid2.PCD_Init();
+
+  Serial.println("Dual RFID + Buzzer System Ready");
+  Serial.println("Scan your card...");
+}
+
+void loop() {
+
+  readRFID(rfid1, SS1, "Reader 1");
+  readRFID(rfid2, SS2, "Reader 2");
+
+}
